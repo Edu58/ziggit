@@ -126,9 +126,9 @@ pub fn main(init: std.process.Init) !void {
     //     }
 
     // mmap dark magic
-    const sampleFile = try std.Io.Dir.cwd().openFile(io, "f.txt", .{ .mode = .read_write });
+    const sampleFile = try std.Io.Dir.cwd().openFile(io, "/tmp/f.txt", .{ .mode = .read_write });
 
-    const sampleFileStat = std.Io.Dir.cwd().statFile(io, "f.txt", .{}) catch |err| {
+    const sampleFileStat = std.Io.Dir.cwd().statFile(io, "/tmp/f.txt", .{}) catch |err| {
         std.debug.print("getting file stats failed", .{});
         return err;
     };

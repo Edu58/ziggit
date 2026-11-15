@@ -1,27 +1,30 @@
 const std = @import("std");
 const Io = std.Io;
 
+const FileError = error{
+    InvalidPath,
+};
+
 const FileIndex = @import("file_index.zig").FileIndex;
 
 pub fn main(init: std.process.Init) !void {
     var filesIdx = try FileIndex.init(init.gpa);
     defer filesIdx.deinit();
 
-    const fileName = "f.txt";
-    const file = std.Io.Dir.cwd().openFile(init.io, fileName, .{ .mode = .read_only }) catch |err| {
-        return err;
-    };
+    const fileName = "/tmp/f.txt";
+    if (!std.Io.Dir.path.isAbsolute(fileName)) return FileError.InvalidPath;
 
-    var pathBuf: [std.Io.Dir.max_path_bytes]u8 = undefined;
+    const fileStat = try std.Io.Dir.cwd().statFile(init.io, fileName, .{ .follow_symlinks = true });
 
-    const bytesRead = try file.realPath(init.io, &pathBuf);
-    const fileStat = try file.stat(init.io);
+    try filesIdx.insert(init.io, fileName, fileStat);
 
-    try filesIdx.insert(pathBuf[0..bytesRead], fileStat);
+    const idxLen = try filesIdx.count(init.io);
+    const fileInIdx = try filesIdx.getByPath(init.io, init.gpa, fileName);
 
-    const idxLen = filesIdx.count();
-    const fileInIdx = filesIdx.getByPath(pathBuf[0..bytesRead]);
-
-    std.debug.print("idx initialized with files: {d}\n", .{idxLen});
-    std.debug.print("idx file path: {s}\n", .{fileInIdx.?.path});
+    if (fileInIdx) |f| {
+        var snapshot = f;
+        defer snapshot.deinit();
+        std.debug.print("idx initialized with files: {d}\n", .{idxLen});
+        std.debug.print("idx file path: {s}\n", .{snapshot.path});
+    }
 }

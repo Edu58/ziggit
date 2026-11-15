@@ -9,7 +9,7 @@ pub fn main(init: std.process.Init) !void {
     var collection = fileMetadataCollection.init(init.gpa);
     defer collection.deinit();
 
-    try collection.add(init.io, "f.txt", true);
+    try collection.add(init.io, "/tmp/f.txt", true);
 
     for (collection.all()) |record| {
         std.debug.print("Path is: {s}\n", .{record.path});

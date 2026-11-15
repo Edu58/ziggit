@@ -14,6 +14,18 @@ pub const FileMetadata = struct {
     }
 };
 
+pub const FileMetadataSnapshot = struct {
+    md: std.Io.File.Stat,
+    path: []const u8,
+    checksum: ?[Sha256.digest_length]u8 = null,
+    allocator: Allocator,
+
+    pub fn deinit(self: *FileMetadataSnapshot) void {
+        self.allocator.free(self.path);
+        self.* = undefined;
+    }
+};
+
 pub fn hashFile(io: std.Io, file: std.Io.File) ![Sha256.digest_length]u8 {
     var hasher = Sha256.init(.{});
     var buffer: [16 * 1024]u8 = undefined;
