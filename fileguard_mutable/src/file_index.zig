@@ -1,7 +1,8 @@
 const std = @import("std");
-
 const Allocator = std.mem.Allocator;
 const SHA256 = std.crypto.hash.sha2.Sha256;
+
+const FileHasher = @import("file_metadata.zig").hashFile;
 const FileMetadata = @import("file_metadata.zig").FileMetadata;
 const FileMetadataSnapshot = @import("file_metadata.zig").FileMetadataSnapshot;
 
@@ -37,7 +38,7 @@ pub const FileIndex = struct {
         self.* = undefined;
     }
 
-    pub fn insert(self: *FileIndex, io: std.Io, path: []const u8, stat: std.Io.File.Stat) !void {
+    pub fn insert(self: *FileIndex, io: std.Io, path: []const u8, stat: std.Io.File.Stat, hashFile: bool) !void {
         try self.mux.lock(io);
         defer self.mux.unlock(io);
 
@@ -49,8 +50,8 @@ pub const FileIndex = struct {
             return errors.InodeAlreadyExists;
         }
 
-        try self.files.ensureTotalCapacity(1);
-        try self.inodes.ensureTotalCapacity(1);
+        try self.files.ensureUnusedCapacity(1);
+        try self.inodes.ensureUnusedCapacity(1);
 
         const owned_path = try self.allocator.dupe(u8, path);
         errdefer self.allocator.free(owned_path);
@@ -58,9 +59,17 @@ pub const FileIndex = struct {
         const record = try self.allocator.create(FileMetadata);
         errdefer self.allocator.destroy(record);
 
+        const checksum = if (hashFile) blk: {
+            const file = std.Io.Dir.cwd().openFile(io, path, .{ .mode = .read_only, .follow_symlinks = false }) catch break :blk null;
+            defer file.close(io);
+
+            break :blk try FileHasher(io, file);
+        } else null;
+
         record.* = .{
             .md = stat,
             .path = owned_path,
+            .checksum = checksum,
         };
 
         self.files.putAssumeCapacityNoClobber(owned_path, record);

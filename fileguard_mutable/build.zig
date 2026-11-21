@@ -21,6 +21,14 @@ pub fn build(b: *std.Build) void {
     // target and optimize options) will be listed when running `zig build --help`
     // in this directory.
 
+    const translate_c = b.addTranslateC(.{
+        .root_source_file = b.path("src/c/c.h"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    translate_c.linkSystemLibrary("c", .{}); // Link libc
+
     // This creates a module, which represents a collection of source files alongside
     // some compilation options, such as optimization mode and linked system libraries.
     // Zig modules are the preferred way of making Zig code available to consumers.
@@ -72,6 +80,7 @@ pub fn build(b: *std.Build) void {
             .optimize = optimize,
             // List of modules available for import in source files part of the
             // root module.
+            .link_libc = true,
             .imports = &.{
                 // Here "fileguard_mutable" is the name you will use in your source code to
                 // import this module (e.g. `@import("fileguard_mutable")`). The name is
@@ -79,6 +88,7 @@ pub fn build(b: *std.Build) void {
                 // can be extremely useful in case of collisions (which can happen
                 // importing modules from different packages).
                 .{ .name = "fileguard_mutable", .module = mod },
+                .{ .name = "c", .module = translate_c.createModule() },
             },
         }),
     });
