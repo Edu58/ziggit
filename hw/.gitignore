@@ -1,0 +1,5 @@
+# Created by https://gitignore.org
+.zig-cache/
+zig-out/
+zig-pkg/
+*.o
