@@ -3,6 +3,7 @@ const Io = std.Io;
 
 const FileIndex = @import("file_index.zig").FileIndex;
 const Traversal = @import("traversal.zig");
+const Watcher = @import("watcher.zig").Watcher;
 
 const FileError = error{
     InvalidPath,
@@ -14,9 +15,6 @@ pub fn visit(fileIdx: *FileIndex, io: Io, full_path: []const u8, hashFile: bool)
 }
 
 pub fn main(init: std.process.Init) !void {
-    var filesIdx = try FileIndex.init(init.gpa);
-    defer filesIdx.deinit();
-
     const config = Traversal.TraversalConfig{
         .max_depth = 10,
         .include_patters = &.{"*"},
@@ -24,13 +22,20 @@ pub fn main(init: std.process.Init) !void {
         .hash_content = true,
     };
 
-    // const root_path = "/etc";
-    const root_path = "/etc";
+    var filesIdx = try FileIndex.init(init.gpa);
+    defer filesIdx.deinit();
 
-    const traversalStats = try Traversal.traverse(init.io, init.gpa, root_path, config, &filesIdx, visit);
+    var watcher = try Watcher.init(init.gpa, config);
+    defer watcher.deinit();
 
-    const idxLen = try filesIdx.count(init.io);
+    const root_wd = try watcher.addWatch("/home/ed/Dev/ziggit/fileguard");
+    const src_wd = try watcher.addWatch("/home/ed/Dev/ziggit/fileguard/src");
+    const helloz_wd = try watcher.addWatch("/home/ed/Dev/ziggit/helloz");
 
-    std.debug.print("traversal stats: \n indexed: {d}\n skipped: {d}\n", .{ traversalStats.files_indexed, traversalStats.files_skipped });
-    std.debug.print("idx initialized with files: {d}\n", .{idxLen});
+    std.debug.print(
+        "Registered watches: root={d}, src={d}, config={d}\n",
+        .{ root_wd, src_wd, helloz_wd },
+    );
+
+    try watcher.run();
 }

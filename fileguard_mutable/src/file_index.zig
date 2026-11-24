@@ -103,7 +103,7 @@ pub const FileIndex = struct {
         try self.mux.lock(io);
         defer self.mux.unlock(io);
 
-        const record = self.inodes.get(path) orelse {
+        const record = self.files.get(path) orelse {
             return errors.FileNotFound;
         };
 
